@@ -115,18 +115,28 @@ class Kernel(object):
         self : the object itself
         """
         k0 = min(self.k, np.shape(X)[0])
-        self.data = X
+        
+        # Handle the case when the distance matrix is provided as-is
+        if self.metric == 'precomputed':
+            fit_data = self.metric_params['distance_matrix']
+            metric_params = None
+        else:
+            fit_data = X
+            metric_params = self.metric_params
+            
+        self.data = fit_data
+        
         # Construct Nearest Neighbor Tree
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", message="Parameter p is found in metric_params. The corresponding parameter from __init__ is ignored.")
             self.neigh = NearestNeighbors(n_neighbors=k0,
                                           metric=self.metric,
-                                          metric_params=self.metric_params,
+                                          metric_params=metric_params,
                                           **self.neighbor_params)
-        self.neigh.fit(X)
+        self.neigh.fit(fit_data)
         self.bandwidth_fxn = self.build_bandwidth_fxn(self.bandwidth_type)
         self.bandwidths = self._compute_bandwidths(X)
-        self.scaled_dists = self._get_scaled_distance_mat(self.data, self.bandwidths)
+        self.scaled_dists = self._get_scaled_distance_mat(fit_data, self.bandwidths)
         self.choose_optimal_epsilon()
         return self
 
